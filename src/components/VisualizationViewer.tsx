@@ -24,12 +24,17 @@ export default function VisualizationViewer({ commands, step, activeFile }: Visu
                     state[cmd.key] = { title: cmd.key, type: 'unknown', data: [], log: [] };
                 } 
                 else if (cmd.method === 'set') {
+                    // Playback can start mid-timeline, or a tracer can be used before it is
+                    // constructed; without an entry there is nothing to update.
+                    const tracer = state[cmd.key];
+                    if (!tracer) return;
+
                     if (Array.isArray(cmd.args[0]) && Array.isArray(cmd.args[0][0])) {
-                        state[cmd.key].type = 'Array2D';
-                        state[cmd.key].data = cmd.args[0].map((row: any[]) => row.map((val: any) => ({ val, bg: '' })));
+                        tracer.type = 'Array2D';
+                        tracer.data = cmd.args[0].map((row: any[]) => row.map((val: any) => ({ val, bg: '' })));
                     } else if (Array.isArray(cmd.args[0])) {
-                        state[cmd.key].type = 'Array1D';
-                        state[cmd.key].data = [cmd.args[0].map((val: any) => ({ val, bg: '' }))];
+                        tracer.type = 'Array1D';
+                        tracer.data = [cmd.args[0].map((val: any) => ({ val, bg: '' }))];
                     }
                 } 
                 else if (cmd.method === 'select') {
@@ -42,17 +47,19 @@ export default function VisualizationViewer({ commands, step, activeFile }: Visu
                 }
                 else if (cmd.method === 'selectRow') {
                     const [row, startCol, endCol] = cmd.args;
-                    if (state[cmd.key]?.data?.[row]) {
+                    const tracer = state[cmd.key];
+                    if (tracer?.data?.[row]) {
                         for (let c = startCol; c <= endCol; c++) {
-                            if (state[cmd.key].data[row][c]) state[cmd.key].data[row][c].bg = '#2962ff';
+                            if (tracer.data[row][c]) tracer.data[row][c].bg = '#2962ff';
                         }
                     }
                 } 
                 else if (cmd.method === 'deselectRow') {
                     const [row, startCol, endCol] = cmd.args;
-                    if (state[cmd.key]?.data?.[row]) {
+                    const tracer = state[cmd.key];
+                    if (tracer?.data?.[row]) {
                         for (let c = startCol; c <= endCol; c++) {
-                            if (state[cmd.key].data[row][c]) state[cmd.key].data[row][c].bg = '';
+                            if (tracer.data[row][c]) tracer.data[row][c].bg = '';
                         }
                     }
                 }
@@ -68,8 +75,11 @@ export default function VisualizationViewer({ commands, step, activeFile }: Visu
                     if (state[cmd.key]?.data?.[row]?.[col]) state[cmd.key].data[row][col].bg = '';
                 }
                 else if (cmd.method === 'println') {
-                    state[cmd.key].type = 'Log';
-                    state[cmd.key].log.push(cmd.args[0]);
+                    const tracer = state[cmd.key];
+                    if (!tracer) return;
+
+                    tracer.type = 'Log';
+                    tracer.log.push(cmd.args[0]);
                 }
             });
         });
