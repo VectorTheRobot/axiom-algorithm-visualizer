@@ -24,12 +24,16 @@ export default function VisualizationViewer({ commands, step, activeFile }: Visu
                     state[cmd.key] = { title: cmd.key, type: 'unknown', data: [], log: [] };
                 } 
                 else if (cmd.method === 'set') {
+                    // A `set` can arrive without a preceding `construct` (e.g. a tracer created
+                    // after the layout delay, or a step window that starts mid-timeline), so the
+                    // entry may be missing. Create it on demand instead of throwing.
+                    const tracer = state[cmd.key] ?? (state[cmd.key] = { title: cmd.key, type: 'unknown', data: [], log: [] });
                     if (Array.isArray(cmd.args[0]) && Array.isArray(cmd.args[0][0])) {
-                        state[cmd.key].type = 'Array2D';
-                        state[cmd.key].data = cmd.args[0].map((row: any[]) => row.map((val: any) => ({ val, bg: '' })));
+                        tracer.type = 'Array2D';
+                        tracer.data = cmd.args[0].map((row: any[]) => row.map((val: any) => ({ val, bg: '' })));
                     } else if (Array.isArray(cmd.args[0])) {
-                        state[cmd.key].type = 'Array1D';
-                        state[cmd.key].data = [cmd.args[0].map((val: any) => ({ val, bg: '' }))];
+                        tracer.type = 'Array1D';
+                        tracer.data = [cmd.args[0].map((val: any) => ({ val, bg: '' }))];
                     }
                 } 
                 else if (cmd.method === 'select') {
@@ -68,8 +72,10 @@ export default function VisualizationViewer({ commands, step, activeFile }: Visu
                     if (state[cmd.key]?.data?.[row]?.[col]) state[cmd.key].data[row][col].bg = '';
                 }
                 else if (cmd.method === 'println') {
-                    state[cmd.key].type = 'Log';
-                    state[cmd.key].log.push(cmd.args[0]);
+                    // Same as `set`: a LogTracer may log before any `construct` is replayed.
+                    const tracer = state[cmd.key] ?? (state[cmd.key] = { title: cmd.key, type: 'unknown', data: [], log: [] });
+                    tracer.type = 'Log';
+                    tracer.log.push(cmd.args[0]);
                 }
             });
         });
